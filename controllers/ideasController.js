@@ -1,6 +1,8 @@
 import { validationResult } from "express-validator";
 import HttpError from "../models/htpp-error.js";
 import { Post } from "../models/post.js";
+import { User } from "../models/user.js";
+import mongoose from "mongoose";
 
 export async function getIdeas(req, res, next) {
   let ideas;
@@ -73,8 +75,25 @@ export async function createIdea(req, res, next) {
     creator,
   });
 
+  let user;
+
   try {
-    await createdIdea.save();
+    user = await User.findById(creator);
+  } catch (err) {
+    return next(new HttpError("Creating idea failed, please try again.", 500));
+  }
+
+  if (!user) {
+    return next(new HttpError("Could not find user for provided id.", 404));
+  }
+
+  try {
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    await createdIdea.save({ session: sess });
+    user.posts.push(createdIdea);
+    await user.save({ session: sess });
+    await sess.commitTransaction();
   } catch (err) {
     return next(new HttpError("Creating idea failed, please try again.", 500));
   }

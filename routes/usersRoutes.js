@@ -1,6 +1,7 @@
 import express from "express";
 import { check } from "express-validator";
 import {
+  getUserById,
   getUsers,
   login,
   signup,
@@ -10,6 +11,7 @@ import {
 const router = express.Router();
 
 router.get("/", getUsers);
+router.get("/:uid", getUserById);
 
 router.post(
   "/signup",

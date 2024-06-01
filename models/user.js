@@ -9,8 +9,7 @@ const userSchema = new Schema({
   password: { type: String, required: true },
   bio: { type: String },
   image: { type: String },
-  // posts: [{ type: mongoose.Types.ObjectId, ref: "Post" }],
-  posts: [{ type: String }],
+  posts: [{ type: mongoose.Types.ObjectId, ref: "Post" }],
   joined: { type: Date, default: Date.now },
 });
 

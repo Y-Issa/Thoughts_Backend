@@ -16,6 +16,24 @@ export async function getUsers(req, res, next) {
   res.json({ users: users.map((user) => user.toObject({ getters: true })) });
 }
 
+export async function getUserById(req, res, next) {
+  const userId = req.params.uid;
+  let user;
+  try {
+    user = await User.findById(userId, "-password");
+  } catch (err) {
+    return next(
+      new HttpError("Fetching user failed, please try again later.", 500)
+    );
+  }
+  if (!user) {
+    return next(
+      new HttpError("Could not find a user for the provided id.", 404)
+    );
+  }
+  res.json({ user: user.toObject({ getters: true }) });
+}
+
 export async function signup(req, res, next) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
