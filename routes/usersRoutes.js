@@ -1,6 +1,11 @@
 import express from "express";
-import { getUsers, signup } from "../controllers/usersController.js";
 import { check } from "express-validator";
+import {
+  getUsers,
+  login,
+  signup,
+  updateUser,
+} from "../controllers/usersController.js";
 
 const router = express.Router();
 
@@ -15,5 +20,9 @@ router.post(
   ],
   signup
 );
+
+router.post("/login", login);
+
+router.patch("/:uid", [check("name").not().isEmpty()], updateUser);
 
 export { router as usersRoutes };

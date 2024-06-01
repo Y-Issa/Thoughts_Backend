@@ -2,6 +2,7 @@ import { validationResult } from "express-validator";
 
 import HttpError from "../models/htpp-error.js";
 import { User } from "../models/user.js";
+import e from "express";
 
 export async function getUsers(req, res, next) {
   let users;
@@ -22,7 +23,7 @@ export async function signup(req, res, next) {
       new HttpError("Invalid inputs passed, please check your data.", 422)
     );
   }
-  const { name, email, password } = req.body;
+  const { name, email, password, bio } = req.body;
 
   let existingUser;
   try {
@@ -41,7 +42,8 @@ export async function signup(req, res, next) {
   const createdUser = new User({
     name,
     email,
-    Image: "https://unsplash.com/photos/pRS6itEjhyI",
+    bio,
+    image: "https://unsplash.com/photos/pRS6itEjhyI",
     password,
     posts: [],
   });
@@ -54,7 +56,11 @@ export async function signup(req, res, next) {
     );
   }
 
-  res.status(201).json({ user: createdUser.toObject({ getters: true }) });
+  res.status(201).json({
+    user: (({ password, ...user }) => user)(
+      createdUser.toObject({ getters: true })
+    ),
+  });
 }
 
 export async function login(req, res, next) {
@@ -78,6 +84,46 @@ export async function login(req, res, next) {
 
   res.json({
     message: "Logged in!",
-    user: existingUser.toObject({ getters: true }),
+    // user: existingUser.toObject({ getters: true }),
+    user: (({ password, ...user }) => user)(
+      existingUser.toObject({ getters: true })
+    ),
   });
+}
+
+export async function updateUser(req, res, next) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(
+      new HttpError("Invalid inputs passed, please check your data.", 422)
+    );
+  }
+
+  const { name, bio, oldPassword, newPassword } = req.body;
+  const userId = req.params.uid;
+
+  let user;
+  try {
+    user = await User.findById(userId);
+  } catch (err) {
+    return next(
+      new HttpError("Something went wrong, could not update user.", 500)
+    );
+  }
+
+  if (oldPassword !== user.password)
+    return next(new HttpError("Invalid password", 401));
+  user.name = name;
+  user.bio = bio;
+  if (newPassword) user.password = newPassword;
+
+  try {
+    await user.save();
+  } catch (err) {
+    return next(
+      new HttpError("Something went wrong, could not update user.", 500)
+    );
+  }
+
+  res.status(200).json({ user: user.toObject({ getters: true }) });
 }
