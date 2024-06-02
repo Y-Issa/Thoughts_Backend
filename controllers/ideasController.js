@@ -7,7 +7,10 @@ import mongoose from "mongoose";
 export async function getIdeas(req, res, next) {
   let ideas;
   try {
-    ideas = await Post.find();
+    ideas = await Post.find().populate({
+      path: "creator",
+      select: "-password",
+    });
   } catch (err) {
     return next(
       new HttpError("Fetching ideas failed, please try again later.", 500)

@@ -2,7 +2,6 @@ import { validationResult } from "express-validator";
 
 import HttpError from "../models/htpp-error.js";
 import { User } from "../models/user.js";
-import e from "express";
 
 export async function getUsers(req, res, next) {
   let users;
