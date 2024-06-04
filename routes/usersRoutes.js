@@ -23,8 +23,19 @@ router.post(
   signup
 );
 
-router.post("/login", login);
+router.post(
+  "/login",
+  [
+    check("email").normalizeEmail().isEmail(),
+    check("password").isLength({ min: 6 }),
+  ],
+  login
+);
 
-router.patch("/:uid", [check("name").not().isEmpty()], updateUser);
+router.patch(
+  "/:uid",
+  [check("name").not().isEmpty(), check("oldPassword").not().isEmpty()],
+  updateUser
+);
 
 export { router as usersRoutes };

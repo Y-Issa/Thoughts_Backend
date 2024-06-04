@@ -1,7 +1,14 @@
 import { validationResult } from "express-validator";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import "dotenv/config.js";
 
 import HttpError from "../models/htpp-error.js";
 import { User } from "../models/user.js";
+
+function createToken(_id) {
+  return jwt.sign({ _id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+}
 
 export async function getUsers(req, res, next) {
   let users;
@@ -45,67 +52,78 @@ export async function signup(req, res, next) {
   let existingUser;
   try {
     existingUser = await User.findOne({ email: email });
-  } catch (err) {
-    return next(
-      new HttpError("Signing up failed, please try again later.", 500)
-    );
-  }
-  if (existingUser) {
-    return next(
-      new HttpError("User exists already, please login instead.", 422)
-    );
-  }
 
-  const createdUser = new User({
-    name,
-    email,
-    bio,
-    image: "https://unsplash.com/photos/pRS6itEjhyI",
-    password,
-    posts: [],
-  });
+    if (existingUser) {
+      return next(
+        new HttpError("User exists already, please login instead.", 422)
+      );
+    }
 
-  try {
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(password, salt);
+
+    const createdUser = new User({
+      name,
+      email,
+      bio,
+      image: "https://unsplash.com/photos/pRS6itEjhyI",
+      password: hash,
+      posts: [],
+    });
+
     await createdUser.save();
+
+    const token = createToken(createdUser._id);
+
+    res.status(201).json({
+      user: (({ password, ...user }) => user)(
+        createdUser.toObject({ getters: true })
+      ),
+      token,
+    });
   } catch (err) {
     return next(
       new HttpError("Signing up failed, please try again later.", 500)
     );
   }
-
-  res.status(201).json({
-    user: (({ password, ...user }) => user)(
-      createdUser.toObject({ getters: true })
-    ),
-  });
 }
 
 export async function login(req, res, next) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(
+      new HttpError("Invalid inputs passed, please check your data.", 422)
+    );
+  }
+
   const { email, password } = req.body;
 
-  let existingUser;
-
   try {
-    existingUser = await User.findOne({ email: email });
+    const existingUser = await User.findOne({ email: email });
+
+    if (!existingUser) {
+      return next(new HttpError("Invalid email address.", 401));
+    }
+
+    const match = await bcrypt.compare(password, existingUser.password);
+
+    if (!match) {
+      return next(new HttpError("Invalid password provided.", 401));
+    }
+
+    const token = createToken(existingUser._id);
+
+    res.json({
+      user: (({ password, ...user }) => user)(
+        existingUser.toObject({ getters: true })
+      ),
+      token,
+    });
   } catch (err) {
     return next(
       new HttpError("Logging in failed, please try again later.", 500)
     );
   }
-
-  if (!existingUser || existingUser.password !== password) {
-    return next(
-      new HttpError("Invalid credentials, could not log you in.", 401)
-    );
-  }
-
-  res.json({
-    message: "Logged in!",
-    // user: existingUser.toObject({ getters: true }),
-    user: (({ password, ...user }) => user)(
-      existingUser.toObject({ getters: true })
-    ),
-  });
 }
 
 export async function updateUser(req, res, next) {
@@ -122,25 +140,33 @@ export async function updateUser(req, res, next) {
   let user;
   try {
     user = await User.findById(userId);
-  } catch (err) {
-    return next(
-      new HttpError("Something went wrong, could not update user.", 500)
-    );
-  }
 
-  if (oldPassword !== user.password)
-    return next(new HttpError("Invalid password", 401));
-  user.name = name;
-  user.bio = bio;
-  if (newPassword) user.password = newPassword;
+    const match = await bcrypt.compare(oldPassword, user.password);
+    if (!match) return next(new HttpError("Invalid password", 401));
 
-  try {
+    user.name = name;
+    if (bio) user.bio = bio;
+
+    if (newPassword) {
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(newPassword, salt);
+
+      user.password = hash;
+    }
+
     await user.save();
+    console.log(user.toObject({ getters: true }));
+
+    const token = createToken(userId);
+
+    res.status(200).json({
+      user: (({ password, ...user }) => user)(user.toObject({ getters: true })),
+      token,
+    });
   } catch (err) {
+    console.log(err);
     return next(
       new HttpError("Something went wrong, could not update user.", 500)
     );
   }
-
-  res.status(200).json({ user: user.toObject({ getters: true }) });
 }
