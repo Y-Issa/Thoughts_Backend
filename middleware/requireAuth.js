@@ -13,7 +13,6 @@ export async function requireAuth(req, res, next) {
 
   try {
     const { _id } = jwt.verify(token, process.env.JWT_SECRET);
-    console.log(_id);
     req.creator = await User.findById(_id).select("_id");
 
     next();

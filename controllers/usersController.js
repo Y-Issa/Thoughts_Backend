@@ -155,7 +155,6 @@ export async function updateUser(req, res, next) {
     }
 
     await user.save();
-    console.log(user.toObject({ getters: true }));
 
     const token = createToken(userId);
 
