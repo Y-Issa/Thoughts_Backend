@@ -11,6 +11,10 @@ const userSchema = new Schema({
   image: { type: String },
   posts: [{ type: mongoose.Types.ObjectId, ref: "Post" }],
   joined: { type: Date, default: Date.now },
+  comments: [
+    { type: mongoose.Types.ObjectId, ref: "Comment" },
+    { default: [] },
+  ],
 });
 
 userSchema.plugin(UniqueValidator);
