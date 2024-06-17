@@ -66,7 +66,7 @@ export async function signup(req, res, next) {
       name,
       email,
       bio,
-      image: "https://unsplash.com/photos/pRS6itEjhyI",
+      image: "",
       password: hash,
       posts: [],
     });
@@ -134,7 +134,7 @@ export async function updateUser(req, res, next) {
     );
   }
 
-  const { name, bio, oldPassword, newPassword } = req.body;
+  const { name, bio, image, oldPassword, newPassword } = req.body;
   const userId = req.params.uid;
 
   let user;
@@ -146,6 +146,7 @@ export async function updateUser(req, res, next) {
 
     user.name = name;
     if (bio) user.bio = bio;
+    if (image) user.image = image;
 
     if (newPassword) {
       const salt = await bcrypt.genSalt(10);
